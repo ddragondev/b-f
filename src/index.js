@@ -4,7 +4,7 @@ import { router } from './routes/cards.js';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import fs from 'fs';
-
+import cors from 'cors';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const cardsDir = join(__dirname, '..', 'cartas');
 
@@ -21,8 +21,8 @@ mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('Conectado a MongoDB'))
   .catch(err => console.error('Error conectando a MongoDB:', err));
 
+app.use(cors());
 app.use('/api', router);
-
 // Manejo de errores global
 app.use((err, req, res, next) => {
   console.error(err.stack);
