@@ -5,6 +5,7 @@ import { Card } from '../models/Card.js';
 import { fileURLToPath } from 'url';
 import { dirname, join, extname } from 'path';
 import fs from 'fs';
+import puppeteer from 'puppeteer';
 
 const router = express.Router();
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -81,5 +82,65 @@ router.get('/cartas/:uuid', async (req, res, next) => {
     next(error);
   }
 });
+
+router.post('/capture', async (req, res) => {
+  const { html } = req.body;
+
+  if (!html) {
+    return res.status(400).json({ error: 'HTML content is required' });
+  }
+
+  try {
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    });
+
+    const page = await browser.newPage();
+    await page.setViewport({
+      width: 450,
+      height: 750,
+      deviceScaleFactor: 1,
+    });
+
+    await page.setContent(html);
+    await page.waitForSelector('img'); // Espera a que haya al menos una imagen en el HTML
+
+    const screenshotBuffer = await page.screenshot({
+      type: 'png',
+      omitBackground: true,
+    });
+
+    await browser.close();
+
+    // Generar un UUID para la imagen
+    const uuid = uuidv4();
+    const filename = `${uuid}.png`;
+    const imagePath = join(cardsDir, filename);
+
+    // Guardar la imagen en el sistema de archivos
+    fs.writeFileSync(imagePath, screenshotBuffer);
+
+    // Guardar la entrada en la base de datos
+    const card = new Card({
+      uuid,
+      imagePath: filename,
+    });
+
+    await card.save();
+
+    // Retornar el ID de la carta creada
+    res.status(201).json({
+      uuid: card.uuid,
+      message: 'Captura almacenada con éxito',
+    });
+  } catch (error) {
+    console.error('Error generating screenshot:', error);
+    res.status(500).json({ error: 'Error generating screenshot' });
+  }
+});
+
+
+
 
 export { router };
