@@ -99,7 +99,7 @@ router.post('/capture', async (req, res) => {
 
     const page = await browser.newPage();
     await page.setViewport({
-      width: 450,
+      width: 350,
       height: 750,
       deviceScaleFactor: 1,
     });
